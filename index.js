@@ -13,7 +13,7 @@ const menuData = [
 optionsForMenuSelection = [
   [{ text: 'Selecionar aleatório', callback_data: 'handleRandomSelect' }],
   [{ text: 'Adicionar novo', callback_data: 'handleAddNew' }],
-  [{ text: 'Editar prato', callback_data: 'handleEditDish' }]
+  [{ text: 'Editar prato', callback_data: 'handleEditDish' }, { text: 'Remover prato', callback_data: 'handleRemoveDish' }]
 ];
 
 const menuOptionsHandlers = {
@@ -28,11 +28,15 @@ const menuOptionsHandlers = {
   handleEditDish: {
     fn: handleEditDish,
     id: 'chatId'
+  },
+  handleRemoveDish: {
+    fn: handleRemoveDish,
+    id: 'chatId'
   }
 }
 
-async function insertNewDish({ dishName, callbackQueryId }) {
-  menuData.push(dishName);
+async function insertNewDish({ dishInfo, callbackQueryId }) {
+  menuData.push(dishInfo);
   await bot.answerCallbackQuery(callbackQueryId, { callback_query_id: callbackQueryId, text: 'Prato adicionado com sucesso!' });
 
 }
@@ -65,9 +69,77 @@ async function handleAddNew({ id: chatId, callbackQueryId }) {
 }
 
 
+async function handleEditDish({ id: chatId, callbackQueryId }) {
+  const text = 'Para editar um prato, utilize o formato: NUMERO_PRATO - NOME NOVO PRATO';
 
-function handleEditDish() {
-  return true;
+  const msg = await bot.sendMessage(chatId, text, {
+    reply_markup: {
+      force_reply: true
+    },
+    disable_notification: true
+  });
+
+  pendingMessagesToBeTreated[msg.message_id] = {
+    fn: editExistingDish,
+    callbackQueryId
+  };
+}
+
+async function handleRemoveDish({ id: chatId, callbackQueryId }) {
+  const text = 'Digite o número do prato que deseja remover:'
+
+  const msg = await bot.sendMessage(chatId, text, {
+    reply_markup: {
+      force_reply: true
+    },
+    disable_notification: true
+  });
+
+  pendingMessagesToBeTreated[msg.message_id] = {
+    fn: removeExistingDish,
+    callbackQueryId
+  };
+}
+
+async function editExistingDish({ dishInfo, callbackQueryId }) {
+  const [dishNumber, dishName] = dishInfo.split('-');
+
+  let feedbackMsg = validateNumberInput({ inputText: dishNumber });
+
+  if (!feedbackMsg) {
+    const indexToEdit = parseInt(dishNumber) - 1;
+    menuData[indexToEdit] = dishName;
+    feedbackMsg = 'Prato editado com sucesso!';
+  }
+
+  await bot.answerCallbackQuery(callbackQueryId, { callback_query_id: callbackQueryId, text: feedbackMsg });
+
+}
+
+function validateNumberInput({ inputText }) {
+  const minValidIndex = 0;
+  const maxValidIndex = menuData.length - 1;
+  const indexToEdit = parseInt(inputText) - 1;
+  if (isNaN(indexToEdit)) {
+    return 'Favor providenciar apenas um número';
+  } else if (indexToEdit < minValidIndex || indexToEdit > maxValidIndex) {
+    return `Favor providenciar um número entre ${minValidIndex + 1} e ${maxValidIndex + 1} (inclusos)`;
+  }
+  return undefined;
+}
+
+async function removeExistingDish({ dishInfo, callbackQueryId }) {
+  let feedbackMsg = validateNumberInput({ inputText: dishInfo });
+
+  if (!feedbackMsg) {
+    const indexToEdit = parseInt(dishInfo) - 1;
+    menuData.splice(indexToEdit, 1);
+    console.log(`Removendo index ${indexToEdit}`);
+    feedbackMsg = 'Prato removido com sucesso!';
+  }
+
+  await bot.answerCallbackQuery(callbackQueryId, { callback_query_id: callbackQueryId, text: feedbackMsg });
+
 }
 
 // replace the value below with the Telegram token you receive from @BotFather
@@ -95,11 +167,11 @@ bot.on('text', async query => {
   /* Check this msg is waiting for a reply */
   if (!pendingMessagesToBeTreated[messageId]) return;
 
-  const dishName = query.text;
+  const dishInfo = query.text;
 
   /* Call function to handle the pending message */
   const { fn: callbackFn, callbackQueryId } = pendingMessagesToBeTreated[messageId];
-  callbackFn({ dishName, callbackQueryId });
+  callbackFn({ dishInfo, callbackQueryId });
 
   /* Remove the msg that has already been processed */
   delete pendingMessagesToBeTreated[messageId];
