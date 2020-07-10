@@ -1,6 +1,9 @@
 {
   "name": "telegram-bot-casal",
   "version": "1.0.0",
+  "engines": {
+    "node": "12.x"
+  },
   "description": "Telegram bot used for couples",
   "main": "index.js",
   "scripts": {
