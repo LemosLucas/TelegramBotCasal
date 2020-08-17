@@ -11,10 +11,16 @@ Atualmente, é possível:
 
 ## Pendências
 - [ ] Será necessário mostrar os resultados de forma paginada, já que fatalmente a lista crescerá
-- [ ] Será necessário abstrair mecanismo para criação destas interações
-  - Criação de lista com pratos de delivery apenas
-  - Criação de lista para supermercado
-    - É possível adicionar checkbox nesta lista, por exemplo?
+- [x] Será necessário abstrair mecanismo para criação destas interações
+  - STATUS:
+    - No meio da refatoração. O caso de seleção de prato aleatório já usa o arquivo `conversation.js` como base e suas abstrações
+    - [ ] Como lidar com níveis de conversação mais profundos? Casos onde temos muitas sequências de perguntas e respostas?
+      - Penso que vale a pena tocar com objetos aninhados e, posteriormente, refatorar, se for o caso
+      - Talvez muitos casos se resumam a apenas mensagens pro usuário, sem mt processamento entre interações
+  - Casos de uso:
+    - Criação de lista para supermercado
+      - É possível adicionar checkbox nesta lista, por exemplo?
+    - Criação de lista com pratos de delivery apenas
 
 # Deploy
 Para fazer o deploy, executar o seguinte:
