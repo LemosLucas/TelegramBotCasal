@@ -1,5 +1,6 @@
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
+const telegramConversation = require('./lib/conversation');
 
 const pendingMessagesToBeTreated = {};
 
@@ -35,26 +36,19 @@ const menuOptionsHandlers = {
   }
 }
 
-async function insertNewDish({ dishInfo, callbackQueryId }) {
+async function insertNewDish({ text: dishInfo }) {
   menuData.push(dishInfo);
-  await bot.answerCallbackQuery(callbackQueryId, { callback_query_id: callbackQueryId, text: 'Prato adicionado com sucesso!' });
-
+  return 'Prato adicionado com sucesso!';
 }
 
-async function handleRandomSelect({ id: chatId, callbackQueryId }) {
-
-  console.log('\n\nSeleção aleatória\n\n');
+function handleRandomSelect() {
   const randomIndex = Math.floor(Math.random() * menuData.length);
   const chosenDish = menuData[randomIndex];
-
-  await bot.sendMessage(chatId, chosenDish, { disable_notification: true });
-  await bot.answerCallbackQuery(callbackQueryId, { callback_query_id: callbackQueryId, text: 'Bon appétit!' });
+  return chosenDish;
 }
 
 async function handleAddNew({ id: chatId, callbackQueryId }) {
-
   const text = 'Digite o nome do prato que deseja cadastrar:'
-
   const msg = await bot.sendMessage(chatId, text, {
     reply_markup: {
       force_reply: true
@@ -111,9 +105,7 @@ async function editExistingDish({ dishInfo, callbackQueryId }) {
     menuData[indexToEdit] = dishName;
     feedbackMsg = 'Prato editado com sucesso!';
   }
-
   await bot.answerCallbackQuery(callbackQueryId, { callback_query_id: callbackQueryId, text: feedbackMsg });
-
 }
 
 function validateNumberInput({ inputText }) {
@@ -134,12 +126,9 @@ async function removeExistingDish({ dishInfo, callbackQueryId }) {
   if (!feedbackMsg) {
     const indexToEdit = parseInt(dishInfo) - 1;
     menuData.splice(indexToEdit, 1);
-    console.log(`Removendo index ${indexToEdit}`);
     feedbackMsg = 'Prato removido com sucesso!';
   }
-
   await bot.answerCallbackQuery(callbackQueryId, { callback_query_id: callbackQueryId, text: feedbackMsg });
-
 }
 
 // replace the value below with the Telegram token you receive from @BotFather
@@ -148,54 +137,36 @@ const token = process.env.AMANDA_LUCAS_BOT_API_KEY;
 // Create a bot that uses 'polling' to fetch new updates
 const bot = new TelegramBot(token, { polling: true });
 
+const { error } = telegramConversation.registerBot(bot);
+if (error) throw new Error(`Not possible to attach Telegram Bot.\n${error}`);
+
+const answerCardapios = JSON.stringify(insertOrderNumber({ menu: menuData }), null, 2)
+  .replace(/(\[|\]|\")/g, '')
+  .replace(/\n\s/, '')
+  .replace(/^\s/gm, '');
+
+const handlesForCardapioDisplay = [
+  { callbackQuery: 'Bon appétit', sendMessageCallback: handleRandomSelect },
+  { callbackQuery: handleAddNew },
+  { callbackQuery: handleEditDish },
+  { callbackQuery: handleRemoveDish }
+];
+
+telegramConversation.registerCommand({
+  command: /\/cardapios/,
+  answer: answerCardapios,
+  options: {
+    reply_markup: {
+      inline_keyboard: optionsForMenuSelection
+    }
+  },
+  inlineKeyboardCallbacks: handlesForCardapioDisplay
+})
+
 /*  Attach listener to the commands available */
 // CARDAPIOS
-bot.onText(/\/cardapios/, handleCardapios);
-// 
-bot.onText(/\/start/, handleStart);
-bot.onText(/\/ola/, handleStart);
+// bot.onText(/\/cardapios/, handleCardapios);
 
-
-/* General function that catches all msgs.
-This will be used to handle replies to bot's messages */
-bot.on('text', async query => {
-
-  if (!query.reply_to_message) return;
-  if (query.reply_to_message.from.username !== 'AmandaLucasCarminattiLemosBot') return;
-  const messageId = query.reply_to_message.message_id;
-
-  /* Check this msg is waiting for a reply */
-  if (!pendingMessagesToBeTreated[messageId]) return;
-
-  const dishInfo = query.text;
-
-  /* Call function to handle the pending message */
-  const { fn: callbackFn, callbackQueryId } = pendingMessagesToBeTreated[messageId];
-  callbackFn({ dishInfo, callbackQueryId });
-
-  /* Remove the msg that has already been processed */
-  delete pendingMessagesToBeTreated[messageId];
-
-  console.log(`Message ${messageId} has been processed and deleted`);
-
-});
-
-
-(async () => {
-  main();
-})();
-
-async function main() {
-  const commands = await bot.getMyCommands();
-  console.log('Comandos disponíveis:');
-  console.log(commands);
-}
-
-
-
-async function handleStart(msg) {
-  await bot.sendMessage(msg.chat.id, `Hello ${msg.from.first_name}`, { disable_notification: true })
-}
 
 async function handleCardapios(msg) {
   const chatId = msg.chat.id;
@@ -215,34 +186,8 @@ async function handleCardapios(msg) {
 }
 
 
-
-// General listener for callback_queries
-bot.on('callback_query', async query => {
-  if (!query.data) return;
-
-  console.log(`Callback query recebida`);
-  console.log(query);
-
-  const callbackQueryId = query.id;
-
-  const ids = {
-    chatId: query.message.chat.id,
-    messageId: query.message.message_id
-  };
-
-  const chosenMenuOptionHandler = menuOptionsHandlers[query.data];
-  const actionFunctionHandle = chosenMenuOptionHandler.fn;
-  console.log('Passou no filtro!!');
-
-
-  await actionFunctionHandle({ id: ids[chosenMenuOptionHandler.id], callbackQueryId });
-
-})
-
-
 function insertOrderNumber({ menu }) {
   const output = menu.map((dish, index) => `${index + 1} - ${dish}`);
-
   return output;
 }
 
