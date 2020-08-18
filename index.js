@@ -17,26 +17,7 @@ optionsForMenuSelection = [
   [{ text: 'Editar prato', callback_data: 'handleEditDish' }, { text: 'Remover prato', callback_data: 'handleRemoveDish' }]
 ];
 
-const menuOptionsHandlers = {
-  handleRandomSelect: {
-    fn: handleRandomSelect,
-    id: 'chatId'
-  },
-  handleAddNew: {
-    fn: handleAddNew,
-    id: 'chatId'
-  },
-  handleEditDish: {
-    fn: handleEditDish,
-    id: 'chatId'
-  },
-  handleRemoveDish: {
-    fn: handleRemoveDish,
-    id: 'chatId'
-  }
-}
-
-async function insertNewDish({ text: dishInfo }) {
+function insertNewDish({ text: dishInfo }) {
   menuData.push(dishInfo);
   return 'Prato adicionado com sucesso!';
 }
@@ -47,55 +28,7 @@ function handleRandomSelect() {
   return chosenDish;
 }
 
-async function handleAddNew({ id: chatId, callbackQueryId }) {
-  const text = 'Digite o nome do prato que deseja cadastrar:'
-  const msg = await bot.sendMessage(chatId, text, {
-    reply_markup: {
-      force_reply: true
-    },
-    disable_notification: true
-  });
-
-  pendingMessagesToBeTreated[msg.message_id] = {
-    fn: insertNewDish,
-    callbackQueryId
-  };
-}
-
-
-async function handleEditDish({ id: chatId, callbackQueryId }) {
-  const text = 'Para editar um prato, utilize o formato: NUMERO_PRATO - NOME NOVO PRATO';
-
-  const msg = await bot.sendMessage(chatId, text, {
-    reply_markup: {
-      force_reply: true
-    },
-    disable_notification: true
-  });
-
-  pendingMessagesToBeTreated[msg.message_id] = {
-    fn: editExistingDish,
-    callbackQueryId
-  };
-}
-
-async function handleRemoveDish({ id: chatId, callbackQueryId }) {
-  const text = 'Digite o número do prato que deseja remover:'
-
-  const msg = await bot.sendMessage(chatId, text, {
-    reply_markup: {
-      force_reply: true
-    },
-    disable_notification: true
-  });
-
-  pendingMessagesToBeTreated[msg.message_id] = {
-    fn: removeExistingDish,
-    callbackQueryId
-  };
-}
-
-async function editExistingDish({ dishInfo, callbackQueryId }) {
+function editExistingDish({ text: dishInfo }) {
   const [dishNumber, dishName] = dishInfo.split('-');
 
   let feedbackMsg = validateNumberInput({ inputText: dishNumber });
@@ -105,7 +38,7 @@ async function editExistingDish({ dishInfo, callbackQueryId }) {
     menuData[indexToEdit] = dishName;
     feedbackMsg = 'Prato editado com sucesso!';
   }
-  await bot.answerCallbackQuery(callbackQueryId, { callback_query_id: callbackQueryId, text: feedbackMsg });
+  return feedbackMsg;
 }
 
 function validateNumberInput({ inputText }) {
@@ -120,7 +53,7 @@ function validateNumberInput({ inputText }) {
   return undefined;
 }
 
-async function removeExistingDish({ dishInfo, callbackQueryId }) {
+function removeExistingDish({ text: dishInfo, callbackQueryId }) {
   let feedbackMsg = validateNumberInput({ inputText: dishInfo });
 
   if (!feedbackMsg) {
@@ -128,7 +61,7 @@ async function removeExistingDish({ dishInfo, callbackQueryId }) {
     menuData.splice(indexToEdit, 1);
     feedbackMsg = 'Prato removido com sucesso!';
   }
-  await bot.answerCallbackQuery(callbackQueryId, { callback_query_id: callbackQueryId, text: feedbackMsg });
+  return feedbackMsg;
 }
 
 // replace the value below with the Telegram token you receive from @BotFather
@@ -140,51 +73,73 @@ const bot = new TelegramBot(token, { polling: true });
 const { error } = telegramConversation.registerBot(bot);
 if (error) throw new Error(`Not possible to attach Telegram Bot.\n${error}`);
 
-const answerCardapios = JSON.stringify(insertOrderNumber({ menu: menuData }), null, 2)
-  .replace(/(\[|\]|\")/g, '')
-  .replace(/\n\s/, '')
-  .replace(/^\s/gm, '');
-
-const handlesForCardapioDisplay = [
-  { callbackQuery: 'Bon appétit', sendMessageCallback: handleRandomSelect },
-  { callbackQuery: handleAddNew },
-  { callbackQuery: handleEditDish },
-  { callbackQuery: handleRemoveDish }
+const conversations = [
+  [
+    {
+      callbackQuery: 'Bon appétit',
+      sendMessageCallback: handleRandomSelect,
+    }
+  ],
+  [
+    {
+      sendMessageCallback: 'Digite o nome do prato que deseja cadastrar:',
+      options: {
+        reply_markup: {
+          force_reply: true
+        }
+      }
+    },
+    {
+      sendMessageCallback: insertNewDish
+    },
+  ],
+  [
+    {
+      sendMessageCallback: 'Para editar um prato, utilize o formato: NUMERO_PRATO - NOME NOVO PRATO',
+      options: {
+        reply_markup: {
+          force_reply: true
+        }
+      }
+    },
+    {
+      sendMessageCallback: editExistingDish
+    }
+  ],
+  [
+    {
+      sendMessageCallback: 'Digite o número do prato que deseja remover:',
+      options: {
+        reply_markup: {
+          force_reply: true
+        }
+      }
+    },
+    {
+      sendMessageCallback: removeExistingDish
+    }
+  ]
 ];
+
+
+function provideMenu() {
+  const answerCardapios = JSON.stringify(insertOrderNumber({ menu: menuData }), null, 2)
+    .replace(/(\[|\]|\")/g, '')
+    .replace(/\n\s/, '')
+    .replace(/^\s/gm, '');
+  return answerCardapios;
+}
 
 telegramConversation.registerCommand({
   command: /\/cardapios/,
-  answer: answerCardapios,
+  answer: provideMenu,
   options: {
     reply_markup: {
       inline_keyboard: optionsForMenuSelection
     }
   },
-  inlineKeyboardCallbacks: handlesForCardapioDisplay
-})
-
-/*  Attach listener to the commands available */
-// CARDAPIOS
-// bot.onText(/\/cardapios/, handleCardapios);
-
-
-async function handleCardapios(msg) {
-  const chatId = msg.chat.id;
-
-  const responseStringified = JSON.stringify(insertOrderNumber({ menu: menuData }), null, 2)
-    .replace(/(\[|\]|\")/g, '')
-    .replace(/\n\s/, '')
-    .replace(/^\s/gm, '');
-
-  await bot.sendMessage(chatId, responseStringified, {
-    reply_markup: {
-      inline_keyboard: optionsForMenuSelection
-    },
-    disable_notification: true
-  });
-
-}
-
+  conversations: conversations
+});
 
 function insertOrderNumber({ menu }) {
   const output = menu.map((dish, index) => `${index + 1} - ${dish}`);
