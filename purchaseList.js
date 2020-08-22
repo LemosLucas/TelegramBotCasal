@@ -1,6 +1,11 @@
 const { stringifyArray, validateNumberInput } = require('./utils');
 
 const purchaseData = ['Macarrão', 'Água'];
+const optionsForPurchaseSelection = [
+  [{ text: 'Adicionar item', callback_data: 'addPurchase' }],
+  [{ text: 'Remove item', callback_data: 'removePurchase' }]
+];
+
 
 function showPurchaseList() {
   const shouldEnumerate = true;
@@ -12,36 +17,45 @@ function removePurchase({ text }) {
 
   if (!feedbackMsg) {
     const indexToEdit = parseInt(text) - 1;
+    const removedItem = purchaseData[indexToEdit];
     purchaseData.splice(indexToEdit, 1);
-    feedbackMsg = 'Item removido com sucesso!';
+    feedbackMsg = `"${removedItem}" removido com sucesso!`;
   }
   return feedbackMsg;
 }
 
 function addPurchase({ text }) {
   purchaseData.push(text);
-  return 'Item adicionado com sucesso';
+  return `"${text}" adicionado com sucesso.`;
 }
 
-const removeConversations = [
+const conversations = [
   [{
+    sendMessageCallback: 'Digite o nome do item que deseja adicionar:',
+    options: {
+      reply_markup: {
+        force_reply: true
+      }
+    }
+  },
+  {
+    sendMessageCallback: addPurchase,
+  }],
+  [{
+    sendMessageCallback: 'Digite o número do item que deseja remover:',
+    options: {
+      reply_markup: {
+        force_reply: true
+      }
+    }
+  },
+  {
     sendMessageCallback: removePurchase,
   }]
 ];
 
-const addConversations = [
-  [{
-    sendMessageCallback: addPurchase,
-  }]
-];
-
 module.exports = {
-  showPurchaseList,
-  options: {
-    reply_markup: {
-      force_reply: true
-    }
-  },
-  removeConversations: removeConversations,
-  addConversations: addConversations
+  conversations: conversations,
+  answer: showPurchaseList,
+  inlineKeyboardInput: optionsForPurchaseSelection
 }

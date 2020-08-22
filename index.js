@@ -1,8 +1,8 @@
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const telegramConversation = require('./lib/conversation');
-const { answer, conversations, inlineKeyboardInput } = require('./menu');
-const { showPurchaseList, removeConversations, addConversations, options: optionsPurchaseList } = require('./purchaseList');
+const { answer: menuAnswer, conversations: menuConversations, inlineKeyboardInput: menuInlineKeyboardInput } = require('./menu');
+const { answer: purchaseAnswer, conversations: purchaseConversations, inlineKeyboardInput: purchaseInlineKeyboardInput } = require('./purchaseList');
 
 // replace the value below with the Telegram token you receive from @BotFather
 const token = process.env.AMANDA_LUCAS_BOT_API_KEY;
@@ -15,33 +15,25 @@ if (error) throw new Error(`Not possible to attach Telegram Bot.\n${error}`);
 
 telegramConversation.registerCommand({
   command: /\/cardapios/,
-  answer: answer,
+  answer: menuAnswer,
   options: {
     reply_markup: {
-      inline_keyboard: inlineKeyboardInput
+      inline_keyboard: menuInlineKeyboardInput
     }
   },
-  conversations: conversations
+  conversations: menuConversations
 });
 
 telegramConversation.registerCommand({
-  command: /\/listarcompras/,
-  answer: showPurchaseList
-})
-
-telegramConversation.registerCommand({
-  command: /\/removercompra/,
-  answer: 'Digite o número do item que deseja remover',
-  conversations: removeConversations,
-  options: optionsPurchaseList
-})
-
-telegramConversation.registerCommand({
-  command: /\/addcompra/,
-  answer: 'Digite o nome do item que deseja adicionar',
-  conversations: addConversations,
-  options: optionsPurchaseList
-})
+  command: /\/compras/,
+  answer: purchaseAnswer,
+  options: {
+    reply_markup: {
+      inline_keyboard: purchaseInlineKeyboardInput
+    }
+  },
+  conversations: purchaseConversations
+});
 
 bot.on('polling_error', error => {
   console.log(`Polling error: ${error}`);
