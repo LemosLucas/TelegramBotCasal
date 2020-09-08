@@ -1,5 +1,5 @@
 const { stringifyArray, validateNumberInput, transformArrayOfObjectInArray } = require('../utils');
-const { read } = require('../database/utils');
+const { read, create } = require('../database/utils');
 
 const DATABASE_TABLE_NAME = 'menuitems';
 
@@ -11,9 +11,16 @@ const menuData = [
 ];
 
 
-function insertNewDish({ text: dishInfo }) {
-  menuData.push(dishInfo);
-  return 'Prato adicionado com sucesso!';
+async function insertNewDish({ text: dishInfo }) {
+  // menuData.push(dishInfo);
+  const result = await create({ table: DATABASE_TABLE_NAME, column: 'dish', entry: dishInfo });
+  let message;
+  if (result.rowCount > 0) {
+    message = 'Prato adicionado com sucesso!';
+  } else {
+    message = `Erro ao adicionar ${dishInfo}!`;
+  }
+  return message;
 }
 
 async function handleRandomSelect() {

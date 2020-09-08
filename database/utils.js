@@ -1,8 +1,10 @@
 const { client } = require('./index');
 
 
-async function create({ entry, table }) {
-  return true;
+async function create({ table, entry, column }) {
+  if (!table || !entry || !column) return [];
+  const result = await client.query(`INSERT INTO ${table} (${column}) VALUES ('${entry}');`);
+  return result;
 }
 
 async function read({ table, entry = null, column = null }) {
