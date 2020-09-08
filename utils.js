@@ -1,3 +1,7 @@
+function transformArrayOfObjectInArray(inputArray, objectProperty) {
+  return inputArray.map(inputItem => inputItem[objectProperty]);
+}
+
 function stringifyArray(array, shouldEnumerateArray) {
   let enumeratedArray = array;
   if (shouldEnumerateArray) enumeratedArray = enumerateArray(array);
@@ -24,7 +28,10 @@ function validateNumberInput({ array, inputText }) {
   return undefined;
 }
 
+
+
 module.exports = {
   stringifyArray,
-  validateNumberInput
+  validateNumberInput,
+  transformArrayOfObjectInArray
 }
