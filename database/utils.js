@@ -17,8 +17,10 @@ async function update() {
   return true;
 }
 
-async function remove() {
-  return true;
+async function remove({ table, column, entry }) {
+  if (!table || !entry || !column) return [];
+  const result = await client.query(`DELETE FROM ${table} where ${column}='${entry}';`);
+  return result;
 }
 
 
