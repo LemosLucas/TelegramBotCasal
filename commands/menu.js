@@ -1,5 +1,5 @@
 const { stringifyArray, validateNumberInput, transformArrayOfObjectInArray } = require('../utils');
-const { read, create, remove } = require('../database/utils');
+const { read, create, remove, update } = require('../database/utils');
 
 const DATABASE_TABLE_NAME = 'menuitems';
 
@@ -29,14 +29,15 @@ async function handleRandomSelect() {
   return chosenDish;
 }
 
-function editExistingDish({ text: dishInfo }) {
+async function editExistingDish({ text: dishInfo }) {
   const [dishNumber, dishName] = dishInfo.split('-');
-
-  let feedbackMsg = validateNumberInput({ inputText: dishNumber, array: menuData });
+  const { rows: menuData } = await read({ table: DATABASE_TABLE_NAME });
+  const arrayMenu = transformArrayOfObjectInArray(menuData, 'dish');
+  let feedbackMsg = validateNumberInput({ inputText: dishNumber, array: arrayMenu });
 
   if (!feedbackMsg) {
     const indexToEdit = parseInt(dishNumber) - 1;
-    menuData[indexToEdit] = dishName;
+    const result = await update({ table: DATABASE_TABLE_NAME, column: 'dish', oldEntry: arrayMenu[indexToEdit], newEntry: dishName });
     feedbackMsg = 'Prato editado com sucesso!';
   }
   return feedbackMsg;
@@ -50,7 +51,6 @@ async function removeExistingDish({ text: dishNumber }) {
   if (!feedbackMsg) {
     const indexToRemove = parseInt(dishNumber) - 1;
     const result = await remove({ table: DATABASE_TABLE_NAME, column: 'dish', entry: arrayMenu[indexToRemove] });
-    console.log('Resultado da remoção: ', result);
     feedbackMsg = 'Prato removido com sucesso!';
   }
   return feedbackMsg;

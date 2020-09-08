@@ -13,8 +13,11 @@ async function read({ table, entry = null, column = null }) {
   return result;
 }
 
-async function update() {
-  return true;
+async function update({ table, oldEntry, newEntry, column }) {
+  if (!table || !oldEntry || !newEntry || !column) return [];
+  const result = await client.query(`UPDATE ${table} SET ${column} = '${newEntry}' WHERE ${column} = '${oldEntry}';`);
+  return result;
+  // UPDATE films SET kind = 'Dramatic' WHERE kind = 'Drama';
 }
 
 async function remove({ table, column, entry }) {
