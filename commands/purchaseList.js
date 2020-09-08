@@ -1,32 +1,42 @@
-const { stringifyArray, validateNumberInput } = require('../utils');
+const { stringifyArray, validateNumberInput, transformArrayOfObjectInArray } = require('../utils');
+const { read, create, remove } = require('../database/utils');
 
-const purchaseData = ['Macarrão', 'Água'];
+const DATABASE_TABLE_NAME = 'purchases';
 const optionsForPurchaseSelection = [
   [{ text: 'Adicionar item', callback_data: 'addPurchase' }],
   [{ text: 'Remove item', callback_data: 'removePurchase' }]
 ];
 
 
-function showPurchaseList() {
+async function showPurchaseList() {
   const shouldEnumerate = true;
-  return stringifyArray(purchaseData, shouldEnumerate);
+  const { rows: purchaseData } = await read({ table: DATABASE_TABLE_NAME });
+  const arrayMenu = transformArrayOfObjectInArray(purchaseData, 'product');
+  return stringifyArray(arrayMenu, shouldEnumerate);
 }
 
-function removePurchase({ text }) {
-  let feedbackMsg = validateNumberInput({ inputText: text, array: purchaseData });
+async function removePurchase({ text: dishNumber }) {
+  const { rows: purchaseData } = await read({ table: DATABASE_TABLE_NAME });
+  const arrayMenu = transformArrayOfObjectInArray(purchaseData, 'product');
+  let feedbackMsg = validateNumberInput({ inputText: dishNumber, array: purchaseData });
 
   if (!feedbackMsg) {
-    const indexToEdit = parseInt(text) - 1;
-    const removedItem = purchaseData[indexToEdit];
-    purchaseData.splice(indexToEdit, 1);
-    feedbackMsg = `"${removedItem}" removido com sucesso!`;
+    const indexToRemove = parseInt(dishNumber) - 1;
+    const result = await remove({ table: DATABASE_TABLE_NAME, column: 'product', entry: arrayMenu[indexToRemove] });
+    feedbackMsg = `"${arrayMenu[indexToRemove]}" removido com sucesso!`;
   }
   return feedbackMsg;
 }
 
-function addPurchase({ text }) {
-  purchaseData.push(text);
-  return `"${text}" adicionado com sucesso.`;
+async function addPurchase({ text }) {
+  const result = await create({ table: DATABASE_TABLE_NAME, column: 'product', entry: text });
+  let message;
+  if (result.rowCount > 0) {
+    message = `"${text}" adicionado com sucesso!`;
+  } else {
+    message = `Erro ao adicionar ${dishInfo}!`;
+  }
+  return message;
 }
 
 const conversations = [

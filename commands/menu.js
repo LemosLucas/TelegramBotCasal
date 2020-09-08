@@ -3,14 +3,6 @@ const { read, create, remove, update } = require('../database/utils');
 
 const DATABASE_TABLE_NAME = 'menuitems';
 
-const menuData = [
-  'Risoto de alho poró com tilápia e camarões',
-  'Macarrão com vina',
-  'Yakissoba',
-  'Jardineira'
-];
-
-
 async function insertNewDish({ text: dishInfo }) {
   const result = await create({ table: DATABASE_TABLE_NAME, column: 'dish', entry: dishInfo });
   let message;
